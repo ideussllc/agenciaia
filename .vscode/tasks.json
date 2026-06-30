@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Frontend: Dev Server",
+      "type": "shell",
+      "command": "npm --prefix /Users/ideuss/Downloads/ideuss-diagnostico/frontend run dev -- --host",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: API Server",
+      "type": "shell",
+      "command": "cd /Users/ideuss/Downloads/ideuss-diagnostico/backend && /Users/ideuss/Downloads/ideuss-diagnostico/.venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Full Stack: Start",
+      "dependsOn": [
+        "Backend: API Server",
+        "Frontend: Dev Server"
+      ],
+      "dependsOrder": "parallel"
+    }
+  ]
+}
