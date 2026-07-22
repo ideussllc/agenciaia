@@ -14,17 +14,31 @@ from datetime import datetime
 from pdf_gen import generate as generate_pdf
 from ai_agent import analyze
 
+
+def _parse_allowed_origins(origins_raw: str | None) -> list[str]:
+    if not origins_raw:
+        return ["*"]
+    origins = [origin.strip() for origin in origins_raw.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
+def _resolve_data_dir() -> str:
+    configured = os.getenv("DATA_DIR", "../data")
+    if os.path.isabs(configured):
+        return configured
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), configured))
+
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="IDEUSS Diagnóstico API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # En producción limitar al dominio del frontend
+    allow_origins=_parse_allowed_origins(os.getenv("CORS_ALLOW_ORIGINS")),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+DATA_DIR = _resolve_data_dir()
 os.makedirs(DATA_DIR, exist_ok=True)
 
 

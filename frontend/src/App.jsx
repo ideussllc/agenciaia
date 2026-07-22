@@ -16,6 +16,27 @@ const components = {
   Produccion: ProduccionForm,
 }
 
+const employeeRangeOptions = [
+  'Menos de 10',
+  'Entre 11 y 50',
+  'Entre 51 y 100',
+  'Mas de 100',
+]
+
+const salesRangeCopOptions = [
+  'Menos de 1.000',
+  'Entre 1.001 y 5.000',
+  'Entre 5.001 y 10.000',
+  'Entre 10.001 y 90.000',
+  'Mas de 90.000',
+]
+
+const requiredMetadataFields = [
+  { key: 'empresa_actividad_economica', label: 'Actividad economica principal' },
+  { key: 'empresa_rango_empleados', label: 'Rango de empleados' },
+  { key: 'empresa_rango_ventas_cop', label: 'Rango de ventas en miles de COP' },
+]
+
 function SectionTitle({ children }) {
   return <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{children}</h1>
 }
@@ -176,7 +197,7 @@ function ReportPane({ data }) {
       {section('Resumen rápido', summarize(['v_dolor', 'm_dolor', 'd_dolor', 'a_dolor', 'p_dolor']))}
       {section('Criterios de éxito', summarize(['v_exito', 'm_exito', 'd_exito', 'a_exito', 'p_exito']))}
       {section('Automatización e IA', summarize(['v_auto_yn', 'v_ia_yn', 'm_auto_yn', 'm_ia_yn', 'd_auto_yn', 'd_ia_yn', 'a_auto_yn', 'a_ia_yn', 'p_auto_yn', 'p_ia_yn']))}
-      {section('Roadmap y prioridad', summarize(['roadmap', 'empresa_nombre', 'empresa_contacto']))}
+      {section('Roadmap y prioridad', summarize(['roadmap', 'empresa_nombre', 'empresa_contacto', 'empresa_actividad_economica', 'empresa_rango_empleados', 'empresa_rango_ventas_cop']))}
     </div>
   )
 }
@@ -192,6 +213,11 @@ function App() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [pdfError, setPdfError] = useState(null)
   const FormComponent = components[activeTab]
+  const missingMetadataFields = requiredMetadataFields.filter(({ key }) => {
+    const value = data[key]
+    return typeof value !== 'string' || !value.trim()
+  })
+  const hasMissingMetadata = missingMetadataFields.length > 0
 
   const handleChange = (key, value) => {
     setData((prev) => ({ ...prev, [key]: value }))
@@ -202,6 +228,12 @@ function App() {
   }
 
   const runAnalysis = async () => {
+    if (hasMissingMetadata) {
+      const labels = missingMetadataFields.map(({ label }) => label).join(', ')
+      setAnalysisError(`Completa los datos iniciales requeridos: ${labels}.`)
+      return
+    }
+
     setIsAnalyzing(true)
     setAnalysisError(null)
     setAnalysisResult(null)
@@ -229,6 +261,12 @@ function App() {
   }
 
   const saveCurrentDiagnostico = async () => {
+    if (hasMissingMetadata) {
+      const labels = missingMetadataFields.map(({ label }) => label).join(', ')
+      setSaveMessage(`Completa los datos iniciales requeridos: ${labels}.`)
+      return
+    }
+
     setIsSaving(true)
     setSaveMessage(null)
     setAnalysisError(null)
@@ -285,16 +323,56 @@ function App() {
                 placeholder="Ej. Maria Pérez"
               />
             </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Actividad economica principal
+              <input
+                value={data.empresa_actividad_economica || ''}
+                onChange={(event) => handleMetadataChange('empresa_actividad_economica', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+                placeholder="Ej. Fabricacion de alimentos"
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Rango de empleados
+              <select
+                value={data.empresa_rango_empleados || ''}
+                onChange={(event) => handleMetadataChange('empresa_rango_empleados', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+              >
+                <option value="">Selecciona una opcion</option>
+                {employeeRangeOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Rango de ventas en miles de COP
+              <select
+                value={data.empresa_rango_ventas_cop || ''}
+                onChange={(event) => handleMetadataChange('empresa_rango_ventas_cop', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+              >
+                <option value="">Selecciona una opcion</option>
+                {salesRangeCopOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
           </div>
           <div className="flex flex-col gap-3 sm:items-end">
             <button
               type="button"
               onClick={saveCurrentDiagnostico}
-              disabled={isSaving}
+              disabled={isSaving || hasMissingMetadata}
               className="inline-flex items-center justify-center rounded-full bg-[#F28C18] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(242,140,24,0.35)] transition hover:bg-[#E17D0C] disabled:cursor-not-allowed disabled:bg-slate-400"
             >
               {isSaving ? 'Guardando...' : 'Guardar diagnóstico'}
             </button>
+            {hasMissingMetadata ? (
+              <p className="max-w-sm text-right text-xs text-rose-600">
+                Requerido para guardar: {missingMetadataFields.map(({ label }) => label).join(', ')}.
+              </p>
+            ) : null}
             {saveMessage ? (
               <p className="text-sm text-[#475467]">{saveMessage}</p>
             ) : null}
@@ -332,7 +410,7 @@ function App() {
                   <button
                     type="button"
                     onClick={runAnalysis}
-                    disabled={isAnalyzing}
+                    disabled={isAnalyzing || hasMissingMetadata}
                     className="inline-flex items-center justify-center rounded-full bg-[#0E7A86] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0A6470] disabled:cursor-not-allowed disabled:bg-slate-400"
                   >
                     {isAnalyzing ? 'Analizando...' : 'Analizar diagnóstico'}

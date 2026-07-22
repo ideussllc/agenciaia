@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ideuss-diagnostico-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATA_DIR
+        value: ../data
+      - key: CORS_ALLOW_ORIGINS
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

@@ -117,4 +117,96 @@ Crear un archivo `.env` en `/backend`:
 ```env
 ANTHROPIC_API_KEY=sk-ant-...   # Para el agente IA (futuro)
 DATA_DIR=../data                # Ruta de almacenamiento de diagnósticos
+CORS_ALLOW_ORIGINS=http://localhost:5173
 ```
+
+Para el frontend, crear `frontend/.env`:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+---
+
+## Desplegar formulario web para clientes
+
+### 1. Backend (Render/Railway/Fly.io)
+
+1. Publica la carpeta `backend/` como servicio web Python.
+2. Comando de arranque sugerido:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+3. Variables de entorno mínimas:
+
+```env
+DATA_DIR=../data
+CORS_ALLOW_ORIGINS=https://TU-FRONTEND.onrender.com
+ANTHROPIC_API_KEY=sk-ant-...   # opcional, solo para /analyze
+```
+
+### 2. Frontend (Vercel/Netlify/Render Static)
+
+1. Publica la carpeta `frontend/` como sitio estático Vite.
+2. Build command: `npm run build`
+3. Publish directory: `dist`
+4. Variable de entorno:
+
+```env
+VITE_API_BASE_URL=https://TU-BACKEND.onrender.com
+```
+
+### 3. Verificación final
+
+1. Abre la URL pública del frontend.
+2. Diligencia y guarda un diagnóstico (endpoint `/save`).
+3. Prueba descargar PDF (`/generate-pdf`).
+4. Si falla por CORS, agrega el dominio exacto del frontend en `CORS_ALLOW_ORIGINS`.
+
+---
+
+## Ruta recomendada: Render (API) + Vercel (Frontend)
+
+### Paso A — Subir el backend a Render
+
+1. En Render, seleccionar **New +** → **Blueprint**.
+2. Conectar este repositorio y desplegar usando `render.yaml` (raíz del proyecto).
+3. Al terminar, copiar la URL pública del backend (ejemplo: `https://ideuss-diagnostico-api.onrender.com`).
+4. En Render, abrir variables del servicio backend y ajustar:
+
+```env
+DATA_DIR=../data
+CORS_ALLOW_ORIGINS=https://TU-FRONTEND.vercel.app
+ANTHROPIC_API_KEY=sk-ant-...   # opcional
+```
+
+### Paso B — Subir el frontend a Vercel
+
+1. En Vercel, seleccionar **Add New** → **Project**.
+2. Importar este mismo repositorio.
+3. Configurar:
+  - **Root Directory**: `frontend`
+  - **Build Command**: `npm run build`
+  - **Output Directory**: `dist`
+4. Agregar variable de entorno:
+
+```env
+VITE_API_BASE_URL=https://TU-BACKEND.onrender.com
+```
+
+5. Desplegar y copiar la URL de Vercel.
+
+### Paso C — Cerrar el loop de CORS
+
+1. Volver a Render.
+2. Cambiar `CORS_ALLOW_ORIGINS` por la URL real de Vercel.
+3. Guardar y redeploy del backend.
+
+### Archivos ya preparados en este repo
+
+- `render.yaml` (deploy del backend en Render)
+- `frontend/vercel.json` (rewrite SPA para evitar 404 al refrescar rutas)
+- `frontend/.env.example`
+- `backend/.env.example`

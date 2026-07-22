@@ -94,6 +94,9 @@ def generate(data: dict, output_path: str):
     story = []
     empresa = data.get("empresa_nombre", "[Empresa]")
     contacto = data.get("empresa_contacto", "")
+    actividad_economica = data.get("empresa_actividad_economica", "")
+    rango_empleados = data.get("empresa_rango_empleados", "")
+    rango_ventas_cop = data.get("empresa_rango_ventas_cop", "")
     fecha = datetime.now().strftime("%d de %B de %Y")
 
     size_map = {
@@ -102,7 +105,13 @@ def generate(data: dict, output_path: str):
         "Entre USD $500.000 y $5.000.000 / año": "Mediana empresa",
         "Más de USD $5.000.000 / año": "Gran empresa",
     }
-    size_label = size_map.get(data.get("v_volumen", ""), "")
+    employee_size_map = {
+        "Menos de 10": "Microempresa",
+        "Entre 11 y 50": "Pequeña empresa",
+        "Entre 51 y 100": "Mediana empresa",
+        "Mas de 100": "Gran empresa",
+    }
+    size_label = employee_size_map.get(rango_empleados, size_map.get(data.get("v_volumen", ""), ""))
 
     # Cover
     story.append(Spacer(1, 1.5*cm))
@@ -131,6 +140,8 @@ def generate(data: dict, output_path: str):
 
     meta_rows = [
         ["Empresa:", empresa], ["Contacto:", contacto or "—"],
+        ["Actividad economica:", actividad_economica or "—"], ["Rango empleados:", rango_empleados or "—"],
+        ["Rango ventas (miles COP):", rango_ventas_cop or "—"],
         ["Fecha:", fecha], ["Elaborado por:", "IDEUSS — AI Agency & Automation"],
     ]
     meta_tbl = Table(meta_rows, colWidths=[4*cm, 13*cm])
