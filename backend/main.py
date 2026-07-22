@@ -28,6 +28,46 @@ def _resolve_data_dir() -> str:
         return configured
     return os.path.abspath(os.path.join(os.path.dirname(__file__), configured))
 
+
+def _normalize_storage_backend(raw_backend: str | None) -> str:
+    backend = (raw_backend or "file").strip().lower()
+    if backend not in {"file", "supabase"}:
+        return "file"
+    return backend
+
+
+def _supabase_base_url() -> str:
+    if not SUPABASE_URL:
+        raise HTTPException(status_code=500, detail="SUPABASE_URL no configurado")
+    return f"{SUPABASE_URL.rstrip('/')}/rest/v1/{SUPABASE_TABLE}"
+
+
+def _supabase_headers(prefer: str | None = None) -> dict[str, str]:
+    if not SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(status_code=500, detail="SUPABASE_SERVICE_ROLE_KEY no configurado")
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+    if prefer:
+        headers["Prefer"] = prefer
+    return headers
+
+
+def _supabase_request(method: str, *, params: Optional[dict[str, str]] = None, payload: Any = None, prefer: str | None = None) -> httpx.Response:
+    url = _supabase_base_url()
+    headers = _supabase_headers(prefer)
+    try:
+        response = httpx.request(method, url, headers=headers, params=params, json=payload, timeout=20)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Error de conexión con Supabase: {exc}")
+
+    if response.status_code >= 400:
+        detail = response.text[:300] if response.text else "Error de Supabase"
+        raise HTTPException(status_code=500, detail=f"Supabase devolvió error: {detail}")
+    return response
+
 # ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="IDEUSS Diagnóstico API", version="1.0.0")
 
@@ -39,6 +79,10 @@ app.add_middleware(
 )
 
 DATA_DIR = _resolve_data_dir()
+STORAGE_BACKEND = _normalize_storage_backend(os.getenv("STORAGE_BACKEND"))
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_TABLE = os.getenv("SUPABASE_TABLE", "diagnosticos")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
@@ -64,11 +108,32 @@ def diagnostico_path(diag_id: str) -> str:
 
 
 def load_diagnostico(diag_id: str) -> dict:
+    if STORAGE_BACKEND == "supabase":
+        response = _supabase_request(
+            "GET",
+            params={"id": f"eq.{diag_id}", "select": "*", "limit": "1"},
+        )
+        rows = response.json()
+        if not rows:
+            raise HTTPException(status_code=404, detail=f"Diagnóstico '{diag_id}' no encontrado")
+        return rows[0]
+
     path = diagnostico_path(diag_id)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail=f"Diagnóstico '{diag_id}' no encontrado")
     with open(path) as f:
         return json.load(f)
+
+
+def build_record(payload: DiagnosticoPayload, diag_id: str) -> dict[str, Any]:
+    return {
+        "id": diag_id,
+        "empresa": payload.empresa_nombre or "Sin nombre",
+        "contacto": payload.empresa_contacto or "",
+        "fecha": datetime.now().isoformat(),
+        "data": payload.data,
+        "roadmap": payload.roadmap,
+    }
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -80,22 +145,26 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "storage_backend": STORAGE_BACKEND,
+    }
 
 
 # 1. Guardar diagnóstico
 @app.post("/save")
 def save_diagnostico(payload: DiagnosticoPayload):
-    """Guarda un diagnóstico en disco y retorna su ID."""
+    """Guarda un diagnóstico y retorna su ID."""
     diag_id = str(uuid.uuid4())[:8]
-    record = {
-        "id": diag_id,
-        "empresa": payload.empresa_nombre or "Sin nombre",
-        "contacto": payload.empresa_contacto or "",
-        "fecha": datetime.now().isoformat(),
-        "data": payload.data,
-        "roadmap": payload.roadmap,
-    }
+    record = build_record(payload, diag_id)
+
+    if STORAGE_BACKEND == "supabase":
+        response = _supabase_request("POST", payload=record, prefer="return=representation")
+        rows = response.json()
+        inserted = rows[0] if isinstance(rows, list) and rows else record
+        return {"id": inserted["id"], "empresa": inserted["empresa"], "fecha": inserted["fecha"]}
+
     with open(diagnostico_path(diag_id), "w", encoding="utf-8") as f:
         json.dump(record, f, ensure_ascii=False, indent=2)
     return {"id": diag_id, "empresa": record["empresa"], "fecha": record["fecha"]}
@@ -105,6 +174,14 @@ def save_diagnostico(payload: DiagnosticoPayload):
 @app.get("/list")
 def list_diagnosticos():
     """Retorna todos los diagnósticos guardados."""
+    if STORAGE_BACKEND == "supabase":
+        response = _supabase_request(
+            "GET",
+            params={"select": "id,empresa,contacto,fecha", "order": "fecha.desc"},
+        )
+        rows = response.json()
+        return {"diagnosticos": rows, "total": len(rows)}
+
     items = []
     for fname in sorted(os.listdir(DATA_DIR), reverse=True):
         if fname.endswith(".json"):
@@ -132,6 +209,17 @@ def load(diag_id: str):
 # 4. Eliminar un diagnóstico
 @app.delete("/delete/{diag_id}")
 def delete(diag_id: str):
+    if STORAGE_BACKEND == "supabase":
+        response = _supabase_request(
+            "DELETE",
+            params={"id": f"eq.{diag_id}", "select": "id"},
+            prefer="return=representation",
+        )
+        rows = response.json()
+        if not rows:
+            raise HTTPException(status_code=404, detail="No encontrado")
+        return {"deleted": diag_id}
+
     path = diagnostico_path(diag_id)
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="No encontrado")

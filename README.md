@@ -210,3 +210,52 @@ VITE_API_BASE_URL=https://TU-BACKEND.onrender.com
 - `frontend/vercel.json` (rewrite SPA para evitar 404 al refrescar rutas)
 - `frontend/.env.example`
 - `backend/.env.example`
+
+---
+
+## Ruta de menor costo (Vercel + Supabase Free)
+
+Si tu proveedor del backend te exige tarjeta para persistencia de disco, usa Supabase como almacenamiento y evita depender de archivos locales.
+
+### 1) Crear proyecto en Supabase (plan Free)
+
+1. Crear proyecto en https://supabase.com
+2. Ir a **SQL Editor** y ejecutar:
+
+```sql
+create table if not exists public.diagnosticos (
+  id text primary key,
+  empresa text,
+  contacto text,
+  fecha timestamptz,
+  data jsonb,
+  roadmap jsonb
+);
+```
+
+### 2) Configurar backend para Supabase
+
+Variables en el backend:
+
+```env
+STORAGE_BACKEND=supabase
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
+SUPABASE_TABLE=diagnosticos
+CORS_ALLOW_ORIGINS=https://TU-FRONTEND.vercel.app
+ANTHROPIC_API_KEY=sk-ant-...   # opcional
+```
+
+Con esto, los endpoints `/save`, `/list`, `/load/{id}` y `/delete/{id}` leen/escriben en Supabase en lugar de `data/*.json`.
+
+### 3) Frontend en Vercel
+
+```env
+VITE_API_BASE_URL=https://TU-BACKEND
+```
+
+### 4) Verificar
+
+1. Guardar un diagnóstico.
+2. Consultar `/list` y validar que aparece.
+3. Generar PDF.

@@ -8,6 +8,14 @@ services:
     envVars:
       - key: DATA_DIR
         value: ../data
+      - key: STORAGE_BACKEND
+        value: file
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_TABLE
+        value: diagnosticos
       - key: CORS_ALLOW_ORIGINS
         sync: false
       - key: ANTHROPIC_API_KEY
