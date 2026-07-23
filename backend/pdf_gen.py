@@ -88,7 +88,7 @@ def generate(data: dict, output_path: str):
         output_path, pagesize=A4,
         leftMargin=2*cm, rightMargin=2*cm,
         topMargin=2*cm, bottomMargin=2*cm,
-        title="Diagnostico OOIA — IDEUSS"
+        title="Descubrimiento OOIA — IDEUSS"
     )
 
     story = []
@@ -134,7 +134,7 @@ def generate(data: dict, output_path: str):
     story.append(logo_grid)
     story.append(Spacer(1, 0.6*cm))
     story.append(HRFlowable(width="100%", thickness=2, color=ORANGE, spaceAfter=18))
-    story.append(Paragraph("Informe de Diagnostico Estrategico", S["cover_title"]))
+    story.append(Paragraph("Informe de Descubrimiento Estrategico", S["cover_title"]))
     story.append(Paragraph("Ecosistema de orquestación de procesos y agentes IA", S["cover_sub"]))
     story.append(Spacer(1, 0.6*cm))
 
@@ -224,6 +224,17 @@ def generate(data: dict, output_path: str):
             ],
         )
         render_list(
+            "Casos de uso aplicados",
+            report.get("casos_uso_aplicados", []),
+            [
+                ("Caso", "caso"),
+                ("Proceso relacionado", "proceso_relacionado"),
+                ("Descripcion", "descripcion"),
+                ("Sector de referencia", "sector_referencia"),
+                ("Impacto esperado", "impacto_esperado"),
+            ],
+        )
+        render_list(
             "Oportunidades estrategicas",
             report.get("oportunidades", []),
             [
@@ -303,7 +314,7 @@ def generate(data: dict, output_path: str):
         for key, lbl in fields:
             story.append(qa_block(lbl, data.get(key)))
             story.append(Spacer(1, 4))
-        story.append(Paragraph(f"Diagnostico estrategico — {sec_title.split('. ')[1]}", S["h2"]))
+        story.append(Paragraph(f"Descubrimiento estrategico — {sec_title.split('. ')[1]}", S["h2"]))
         story.extend(strategic_block(prefix, sec_title, data))
         story.append(PageBreak())
 

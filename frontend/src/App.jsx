@@ -153,7 +153,7 @@ function ReportPane({ data }) {
 
   return (
     <div className="space-y-6">
-      <SectionTitle>Informe de diagnóstico</SectionTitle>
+      <SectionTitle>Informe de descubrimiento</SectionTitle>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-3xl border border-[#E4E7EB] bg-white p-5 shadow-sm">
@@ -161,7 +161,7 @@ function ReportPane({ data }) {
           <p className="mt-2 text-xl font-bold text-[#101828]">{data.empresa_nombre || 'Sin definir'}</p>
         </div>
         <div className="rounded-3xl border border-[#E4E7EB] bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#667085]">Avance de diagnóstico</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#667085]">Avance de descubrimiento</p>
           <p className="mt-2 text-xl font-bold text-[#101828]">{completionPct}%</p>
         </div>
         <div className="rounded-3xl border border-[#E4E7EB] bg-white p-5 shadow-sm">
@@ -183,7 +183,7 @@ function ReportPane({ data }) {
                   {area.status.label}
                 </span>
               </div>
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#667085]">Cobertura diagnostico</p>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-[#667085]">Cobertura descubrimiento</p>
               <p className="mt-1 text-sm text-[#344054]">{area.answered}/{area.keys.length} respuestas clave ({area.score}%)</p>
               <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#667085]">Dolor principal</p>
               <p className="mt-1 text-sm text-[#344054]">{area.pain}</p>
@@ -290,10 +290,10 @@ function App() {
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-7 grid gap-6 rounded-[2rem] border border-[#E4E7EB] bg-white/90 p-6 shadow-[0_20px_50px_rgba(16,24,40,0.12)] backdrop-blur reveal sm:grid-cols-[1.5fr_1fr] sm:p-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#F28C18]">Diagnóstico OOIA</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#F28C18]">Descubrimiento OOIA</p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-[#101828] sm:text-5xl">Arquitectura de procesos y agentes IA</h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[#475467] sm:text-base">
-              Completa cada área para convertir el diagnóstico en un plan accionable, con recomendaciones automáticas y exportación profesional.
+              Completa cada área para convertir el descubrimiento en un plan accionable, con recomendaciones automáticas y exportación profesional.
             </p>
           </div>
           <div className="brand-card">
@@ -366,7 +366,7 @@ function App() {
               disabled={isSaving || hasMissingMetadata}
               className="inline-flex items-center justify-center rounded-full bg-[#F28C18] px-5 py-3 text-sm font-semibold text-white shadow-[0_8px_20px_rgba(242,140,24,0.35)] transition hover:bg-[#E17D0C] disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              {isSaving ? 'Guardando...' : 'Guardar diagnóstico'}
+              {isSaving ? 'Guardando...' : 'Guardar descubrimiento'}
             </button>
             {hasMissingMetadata ? (
               <p className="max-w-sm text-right text-xs text-rose-600">
@@ -413,7 +413,7 @@ function App() {
                     disabled={isAnalyzing || hasMissingMetadata}
                     className="inline-flex items-center justify-center rounded-full bg-[#0E7A86] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0A6470] disabled:cursor-not-allowed disabled:bg-slate-400"
                   >
-                    {isAnalyzing ? 'Analizando...' : 'Analizar diagnóstico'}
+                    {isAnalyzing ? 'Analizando...' : 'Analizar descubrimiento'}
                   </button>
                   <button
                     type="button"
@@ -494,6 +494,21 @@ function App() {
                           <p className="text-sm text-[#475467]">Función: {item.funcion}</p>
                           <p className="text-sm text-[#475467]">Beneficio: {item.beneficio}</p>
                           <p className="mt-2 text-sm text-[#344054]">Implementación: {item.implementacion}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-[#E4E7EB] bg-white p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold text-[#101828]">Casos de uso aplicados</h3>
+                    <div className="mt-4 space-y-4">
+                      {analysisResult.casos_uso_aplicados?.map((item, index) => (
+                        <div key={index} className="rounded-2xl border border-[#E4E7EB] bg-[#F9FAFB] p-4">
+                          <p className="text-sm font-semibold text-[#1D2939]">{item.caso}</p>
+                          <p className="text-sm text-[#475467]">Proceso relacionado: {item.proceso_relacionado}</p>
+                          <p className="text-sm text-[#475467]">Sector de referencia: {item.sector_referencia}</p>
+                          <p className="text-sm text-[#475467]">Impacto esperado: {item.impacto_esperado}</p>
+                          <p className="mt-2 text-sm text-[#344054]">{item.descripcion}</p>
                         </div>
                       ))}
                     </div>
