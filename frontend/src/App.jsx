@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import VentasForm from './forms/VentasForm.jsx'
 import MercadeoForm from './forms/MercadeoForm.jsx'
 import DeliveryForm from './forms/DeliveryForm.jsx'
 import AdminForm from './forms/AdminForm.jsx'
 import ProduccionForm from './forms/ProduccionForm.jsx'
-import { analyzeDiagnostico, saveDiagnostico, generatePDF } from './api.js'
+import AdminUsersScreen from './forms/AdminUsersScreen.jsx'
+import LoginScreen from './LoginScreen.jsx'
+import { analyzeDiagnostico, saveDiagnostico, sendReportPDF, fetchCurrentUser } from './api.js'
+import { getToken, clearToken } from './auth.js'
 import ideussLogo from './assets/ideuss-logo.jpg'
 import economicActivities from './data/economicActivities.js'
 
@@ -22,6 +25,12 @@ const employeeRangeOptions = [
   'Entre 11 y 50',
   'Entre 51 y 100',
   'Mas de 100',
+]
+
+const decisionLevelOptions = [
+  'Toma la decisión',
+  'Participa en la decisión',
+  'Propone la decisión',
 ]
 
 const salesRangeCopOptions = [
@@ -43,6 +52,8 @@ const salesRangeUsdOptions = [
 const OTRA_ACTIVIDAD = 'Otra actividad (no está en la lista)'
 
 const requiredMetadataFields = [
+  { key: 'empresa_contacto_cargo', label: 'Cargo que desempeña el contacto' },
+  { key: 'empresa_contacto_nivel_decision', label: 'Nivel de decisión del contacto' },
   { key: 'empresa_actividad_economica', label: 'Actividad economica principal' },
   { key: 'empresa_rango_empleados', label: 'Rango de empleados' },
   { key: 'empresa_rango_ventas_cop', label: 'Rango de ventas' },
@@ -214,6 +225,8 @@ function ReportPane({ data }) {
 }
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(null)
+  const [authChecked, setAuthChecked] = useState(false)
   const [activeTab, setActiveTab] = useState('Mercadeo')
   const [data, setData] = useState({})
   const [analysisResult, setAnalysisResult] = useState(null)
@@ -221,14 +234,36 @@ function App() {
   const [saveMessage, setSaveMessage] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [pdfError, setPdfError] = useState(null)
+  const [isSending, setIsSending] = useState(false)
+  const [sendError, setSendError] = useState(null)
+  const [sendMessage, setSendMessage] = useState(null)
+  const [pipedriveLeadId, setPipedriveLeadId] = useState(null)
+  const [diagId, setDiagId] = useState(null)
   const FormComponent = components[activeTab]
   const missingMetadataFields = requiredMetadataFields.filter(({ key }) => {
     const value = data[key]
     return typeof value !== 'string' || !value.trim()
   })
   const hasMissingMetadata = missingMetadataFields.length > 0
+  const visibleTabs = currentUser?.isAdmin ? [...tabs, 'Usuarios'] : tabs
+
+  useEffect(() => {
+    if (!getToken()) {
+      setAuthChecked(true)
+      return
+    }
+    fetchCurrentUser().then((response) => {
+      if (response.success) {
+        setCurrentUser({ username: response.data.sub, isAdmin: response.data.is_admin })
+      }
+      setAuthChecked(true)
+    })
+  }, [])
+
+  const handleLogout = () => {
+    clearToken()
+    setCurrentUser(null)
+  }
 
   const handleChange = (key, value) => {
     setData((prev) => ({ ...prev, [key]: value }))
@@ -275,14 +310,35 @@ function App() {
     }
   }
 
-  const downloadReportPDF = async () => {
-    setIsDownloading(true)
-    setPdfError(null)
+  const sendReportEmail = async () => {
+    setIsSending(true)
+    setSendError(null)
+    setSendMessage(null)
 
-    const response = await generatePDF(data, analysisResult)
-    setIsDownloading(false)
-    if (!response.success) {
-      setPdfError(response.error)
+    let leadId = pipedriveLeadId
+    let currentDiagId = diagId
+
+    if (!currentDiagId) {
+      const saveResponse = await saveDiagnostico(data)
+      if (!saveResponse.success) {
+        setIsSending(false)
+        setSendError(saveResponse.error)
+        return
+      }
+      currentDiagId = saveResponse.data.id
+      setDiagId(currentDiagId)
+      if (saveResponse.data.pipedrive_lead_id) {
+        leadId = saveResponse.data.pipedrive_lead_id
+        setPipedriveLeadId(leadId)
+      }
+    }
+
+    const response = await sendReportPDF(data, analysisResult, leadId, currentDiagId)
+    setIsSending(false)
+    if (response.success) {
+      setSendMessage('Informe enviado. Revisa el borrador en el correo de ventas.')
+    } else {
+      setSendError(response.error)
     }
   }
 
@@ -301,9 +357,25 @@ function App() {
     setIsSaving(false)
     if (response.success) {
       setSaveMessage(`Guardado con ID: ${response.data.id}`)
+      setDiagId(response.data.id)
+      if (response.data.pipedrive_lead_id) {
+        setPipedriveLeadId(response.data.pipedrive_lead_id)
+      }
     } else {
       setSaveMessage(`Error guardando: ${response.error}`)
     }
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="ideuss-bg flex min-h-screen items-center justify-center text-slate-900">
+        <p className="text-sm text-[#667085]">Cargando...</p>
+      </div>
+    )
+  }
+
+  if (!currentUser) {
+    return <LoginScreen onLogin={setCurrentUser} />
   }
 
   return (
@@ -314,6 +386,16 @@ function App() {
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-4 flex items-center justify-end gap-3 text-sm text-[#475467]">
+          <span>Sesión: <strong className="text-[#101828]">{currentUser.username}</strong>{currentUser.isAdmin ? ' (admin)' : ''}</span>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-full border border-[#D0D5DD] px-3 py-1.5 text-xs font-semibold text-[#344054] transition hover:border-[#F28C18] hover:text-[#F28C18]"
+          >
+            Cerrar sesión
+          </button>
+        </div>
         <div className="mb-7 grid gap-6 rounded-[2rem] border border-[#E4E7EB] bg-white/90 p-6 shadow-[0_20px_50px_rgba(16,24,40,0.12)] backdrop-blur reveal sm:grid-cols-[1.5fr_1fr] sm:p-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#F28C18]">Descubrimiento OOIA</p>
@@ -360,6 +442,28 @@ function App() {
                 className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
                 placeholder="Ej. Maria Pérez"
               />
+            </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Cargo que desempeña
+              <input
+                value={data.empresa_contacto_cargo || ''}
+                onChange={(event) => handleMetadataChange('empresa_contacto_cargo', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+                placeholder="Ej. Gerente de Operaciones"
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Nivel de decisión
+              <select
+                value={data.empresa_contacto_nivel_decision || ''}
+                onChange={(event) => handleMetadataChange('empresa_contacto_nivel_decision', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+              >
+                <option value="">Selecciona una opcion</option>
+                {decisionLevelOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
             </label>
             <label className="block text-sm font-medium text-[#344054]">
               Correo electrónico del contacto
@@ -480,7 +584,7 @@ function App() {
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-[#E4E7EB] bg-white/90 p-2 shadow-[0_10px_26px_rgba(16,24,40,0.08)] backdrop-blur">
-          {tabs.map((tab) => {
+          {visibleTabs.map((tab) => {
             const active = tab === activeTab
             return (
               <button
@@ -517,11 +621,11 @@ function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={downloadReportPDF}
-                    disabled={!analysisResult || isDownloading}
+                    onClick={sendReportEmail}
+                    disabled={!analysisResult || isSending}
                     className="inline-flex items-center justify-center rounded-full bg-[#1D2939] px-5 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-slate-400"
                   >
-                    {isDownloading ? 'Generando PDF...' : 'Descargar informe PDF'}
+                    {isSending ? 'Enviando...' : 'Enviar informe en PDF'}
                   </button>
                 </div>
               </div>
@@ -531,9 +635,14 @@ function App() {
                   Error al analizar: {analysisError}
                 </div>
               ) : null}
-              {pdfError ? (
+              {sendError ? (
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                  Error al generar PDF: {pdfError}
+                  Error al enviar el informe: {sendError}
+                </div>
+              ) : null}
+              {sendMessage ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+                  {sendMessage}
                 </div>
               ) : null}
 
@@ -659,6 +768,8 @@ function App() {
                 <ReportPane data={data} />
               )}
             </div>
+          ) : activeTab === 'Usuarios' ? (
+            <AdminUsersScreen />
           ) : (
             <FormComponent data={data} onChange={handleChange} />
           )}
