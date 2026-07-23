@@ -15,7 +15,7 @@ function VentasForm({ data, onChange }) {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold text-slate-900">Ventas</h2>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Volumen de ventas anual</span>
+          <span className="text-sm font-medium text-slate-700">Volumen de ventas anual (opcional)</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -23,8 +23,40 @@ function VentasForm({ data, onChange }) {
             onChange={(e) => onChange('v_volumen', e.target.value)}
           />
         </label>
+        <div className="space-y-3">
+          <span className="text-sm font-medium text-slate-700">Canales de ventas utilizados</span>
+          {['Equipo de ventas propio', 'Puntos de venta', 'Sitio web', 'Tienda Online', 'Instagram', 'Facebook', 'LinkedIn', 'WhatsApp', 'Ferias o eventos', 'Networking'].map((option) => (
+            <label key={option} className={optionStyle}>
+              <input
+                type="checkbox"
+                checked={(data.v_canales || []).includes(option)}
+                onChange={() => toggleCheckbox('v_canales', option)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-600"
+              />
+              {option}
+            </label>
+          ))}
+        </div>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Facturas al mes</span>
+          <span className="text-sm font-medium text-slate-700">Ciudades o mercados donde operan</span>
+          <textarea
+            className={fieldStyle}
+            rows="2"
+            value={data.v_ciudades || ''}
+            onChange={(e) => onChange('v_ciudades', e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Número de vendedores que conforman su equipo de ventas</span>
+          <textarea
+            className={fieldStyle}
+            rows="2"
+            value={data.v_num_vendedores || ''}
+            onChange={(e) => onChange('v_num_vendedores', e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Promedio de facturas al mes</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -33,7 +65,7 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Prospectos atendidos al mes</span>
+          <span className="text-sm font-medium text-slate-700">Promedio de nuevos prospectos de clientes atendidos por mes</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -42,7 +74,7 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Llamadas entrantes al mes</span>
+          <span className="text-sm font-medium text-slate-700">Promedio llamadas entrantes de clientes por mes. (Si no se tiene el dato colocar un estimado)</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -51,13 +83,27 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <div className="space-y-3">
-          <span className="text-sm font-medium text-slate-700">¿Qué parte del proceso está estandarizado?</span>
-          {['CRM', 'Pipeline', 'Scripts de venta', 'No está estandarizado'].map((option) => (
+          <span className="text-sm font-medium text-slate-700">¿Qué parte del proceso está estandarizado o tiene procedimientos?</span>
+          {['Atención a clientes', 'Registro de clientes', 'Gestión de clientes', 'Cierre de ventas', 'Facturación', 'Cobros y pagos'].map((option) => (
             <label key={option} className={optionStyle}>
               <input
                 type="checkbox"
                 checked={(data.v_proc || []).includes(option)}
                 onChange={() => toggleCheckbox('v_proc', option)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-600"
+              />
+              {option}
+            </label>
+          ))}
+        </div>
+        <div className="space-y-3">
+          <span className="text-sm font-medium text-slate-700">Herramientas tecnológicas que dispone en su proceso de ventas</span>
+          {['CRM', 'ERP', 'Pipeline o Embudos de venta en Excel u otro', 'Scripts, Pitches o guiones de venta por canal', 'Ninguna'].map((option) => (
+            <label key={option} className={optionStyle}>
+              <input
+                type="checkbox"
+                checked={(data.v_herramientas || []).includes(option)}
+                onChange={() => toggleCheckbox('v_herramientas', option)}
                 className="h-4 w-4 rounded border-slate-300 text-slate-600"
               />
               {option}
@@ -81,7 +127,16 @@ function VentasForm({ data, onChange }) {
           ))}
         </fieldset>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Proceso de cotización</span>
+          <span className="text-sm font-medium text-slate-700">Describir el proceso de registro de prospectos de clientes hasta la identificación de la necesidad para hacer la cotización</span>
+          <textarea
+            className={fieldStyle}
+            rows="3"
+            value={data.v_registro_prospectos || ''}
+            onChange={(e) => onChange('v_registro_prospectos', e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Describir el proceso de cotizaciones</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -90,7 +145,7 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Frecuencia de pérdida de prospectos</span>
+          <span className="text-sm font-medium text-slate-700">Número promedio de prospectos que se pierden o no son atendidos (Estimar si no se tiene el dato)</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -99,7 +154,7 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Tasa de conversión lead → cliente (%)</span>
+          <span className="text-sm font-medium text-slate-700">Tasa de conversión (%) Número de clientes nuevos sobre el número prospectos atendidos</span>
           <textarea
             className={fieldStyle}
             rows="2"
@@ -108,7 +163,7 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Ticket promedio por venta</span>
+          <span className="text-sm font-medium text-slate-700">Valor promedio de venta por factura emitida</span>
           <textarea
             className={fieldStyle}
             rows="2"
@@ -117,7 +172,7 @@ function VentasForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Seguimiento post-cotización (SLA y frecuencia)</span>
+          <span className="text-sm font-medium text-slate-700">Describir el proceso se seguimiento y gestión de clientes una vez se envía la cotización</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -131,7 +186,7 @@ function VentasForm({ data, onChange }) {
         <h3 className="text-xl font-semibold text-slate-900">Diagnóstico estratégico</h3>
         <div className="mt-4 space-y-5">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">A — Dolor principal</span>
+            <span className="text-sm font-medium text-slate-700">A — Dolor principal del proceso de ventas</span>
             <textarea
               className={fieldStyle}
               rows="3"

@@ -7,7 +7,7 @@ function DeliveryForm({ data, onChange }) {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold text-slate-900">Delivery / Fulfillment</h2>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Proceso de entrega</span>
+          <span className="text-sm font-medium text-slate-700">Describa el proceso desde que se confirma el pedido por parte del cliente hasta que se entrega (Almacenamiento, Alistamiento, Picking, Empacado, Etiquetado, Guia de despacho, envío y entrega al cliente)</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -16,12 +16,21 @@ function DeliveryForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Tiempo promedio de entrega</span>
+          <span className="text-sm font-medium text-slate-700">Tiempo promedio de entrega desde que llega el pedido hasta que el cliente recibe el paquete</span>
           <textarea
             className={fieldStyle}
             rows="3"
             value={data.d_tiempo || ''}
             onChange={(e) => onChange('d_tiempo', e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Número de proveedores activos</span>
+          <textarea
+            className={fieldStyle}
+            rows="2"
+            value={data.d_proveedores || ''}
+            onChange={(e) => onChange('d_proveedores', e.target.value)}
           />
         </label>
         <div className="space-y-3">
@@ -133,7 +142,7 @@ function DeliveryForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">SLA comprometido vs cumplimiento real</span>
+          <span className="text-sm font-medium text-slate-700">Meta del acuerdo de servicio comprometido versus cumplimiento real</span>
           <textarea
             className={fieldStyle}
             rows="2"

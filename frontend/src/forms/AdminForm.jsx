@@ -7,7 +7,7 @@ function AdminForm({ data, onChange }) {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold text-slate-900">Administración</h2>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Proceso de facturación</span>
+          <span className="text-sm font-medium text-slate-700">Describa como es el proceso de facturación, cobro, recepción y contabilización de pagos.</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -43,7 +43,7 @@ function AdminForm({ data, onChange }) {
           />
         </div>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Cuentas por cobrar</span>
+          <span className="text-sm font-medium text-slate-700">Describe como es el proceso de compras desde la emisión de la orden de compra, recepción, recibo de factura del proveedor, pago de cuenta por pagar y contabilización.</span>
           <textarea
             className={fieldStyle}
             rows="3"
@@ -61,7 +61,16 @@ function AdminForm({ data, onChange }) {
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Estructura documental</span>
+          <span className="text-sm font-medium text-slate-700">Describa como es el proceso de nómina, registros de novedades, liquidación, contabilización y pago a empleados.</span>
+          <textarea
+            className={fieldStyle}
+            rows="3"
+            value={data.a_nomina || ''}
+            onChange={(e) => onChange('a_nomina', e.target.value)}
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium text-slate-700">Describa el proceso de gestión documental y archivo, tablas de retención documental y tipos de documentos críticos que archivan por proceso.</span>
           <textarea
             className={fieldStyle}
             rows="3"

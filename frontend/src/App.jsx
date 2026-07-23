@@ -6,8 +6,9 @@ import AdminForm from './forms/AdminForm.jsx'
 import ProduccionForm from './forms/ProduccionForm.jsx'
 import { analyzeDiagnostico, saveDiagnostico, generatePDF } from './api.js'
 import ideussLogo from './assets/ideuss-logo.jpg'
+import economicActivities from './data/economicActivities.js'
 
-const tabs = ['Ventas', 'Mercadeo', 'Delivery', 'Administracion', 'Produccion', 'Informe']
+const tabs = ['Mercadeo', 'Ventas', 'Delivery', 'Administracion', 'Produccion', 'Informe']
 const components = {
   Ventas: VentasForm,
   Mercadeo: MercadeoForm,
@@ -31,10 +32,20 @@ const salesRangeCopOptions = [
   'Mas de 90.000',
 ]
 
+const salesRangeUsdOptions = [
+  'Menos de 0,3',
+  'Entre 0,3 y 1,5',
+  'Entre 1,5 y 5,0',
+  'Entre 5,0 y 25,0',
+  'Mas de 25,0',
+]
+
+const OTRA_ACTIVIDAD = 'Otra actividad (no está en la lista)'
+
 const requiredMetadataFields = [
   { key: 'empresa_actividad_economica', label: 'Actividad economica principal' },
   { key: 'empresa_rango_empleados', label: 'Rango de empleados' },
-  { key: 'empresa_rango_ventas_cop', label: 'Rango de ventas en miles de COP' },
+  { key: 'empresa_rango_ventas_cop', label: 'Rango de ventas' },
 ]
 
 function SectionTitle({ children }) {
@@ -69,7 +80,7 @@ function ReportPane({ data }) {
     {
       name: 'Ventas',
       prefix: 'v',
-      keys: ['v_volumen', 'v_facturas', 'v_pro', 'v_ll', 'v_proc', 'v_ciclo', 'v_cotiz', 'v_perd', 'v_conv', 'v_ticket', 'v_seg', 'v_dolor', 'v_auto_yn', 'v_ia_yn', 'v_exito'],
+      keys: ['v_canales', 'v_ciudades', 'v_num_vendedores', 'v_facturas', 'v_pro', 'v_ll', 'v_proc', 'v_herramientas', 'v_ciclo', 'v_registro_prospectos', 'v_cotiz', 'v_perd', 'v_conv', 'v_ticket', 'v_seg', 'v_dolor', 'v_auto_yn', 'v_ia_yn', 'v_exito'],
     },
     {
       name: 'Mercadeo',
@@ -79,12 +90,12 @@ function ReportPane({ data }) {
     {
       name: 'Delivery',
       prefix: 'd',
-      keys: ['d_proc', 'd_tiempo', 'd_doc', 'd_resp', 'd_cal', 'd_err', 'd_rec', 'd_vis', 'd_sla', 'd_otif', 'd_devol', 'd_dolor', 'd_auto_yn', 'd_ia_yn', 'd_exito'],
+      keys: ['d_proc', 'd_tiempo', 'd_proveedores', 'd_doc', 'd_resp', 'd_cal', 'd_err', 'd_rec', 'd_vis', 'd_sla', 'd_otif', 'd_devol', 'd_dolor', 'd_auto_yn', 'd_ia_yn', 'd_exito'],
     },
     {
       name: 'Administracion',
       prefix: 'a',
-      keys: ['a_fact', 'a_soft', 'a_cobrar', 'a_cierre', 'a_estr', 'a_man', 'a_dep', 'a_rep', 'a_dso', 'a_aprob', 'a_concil', 'a_dolor', 'a_auto_yn', 'a_ia_yn', 'a_exito'],
+      keys: ['a_fact', 'a_soft', 'a_cobrar', 'a_cierre', 'a_nomina', 'a_estr', 'a_man', 'a_dep', 'a_rep', 'a_dso', 'a_aprob', 'a_concil', 'a_dolor', 'a_auto_yn', 'a_ia_yn', 'a_exito'],
     },
     {
       name: 'Produccion',
@@ -203,7 +214,7 @@ function ReportPane({ data }) {
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState('Ventas')
+  const [activeTab, setActiveTab] = useState('Mercadeo')
   const [data, setData] = useState({})
   const [analysisResult, setAnalysisResult] = useState(null)
   const [analysisError, setAnalysisError] = useState(null)
@@ -226,6 +237,21 @@ function App() {
   const handleMetadataChange = (key, value) => {
     setData((prev) => ({ ...prev, [key]: value }))
   }
+
+  const handleMonedaChange = (moneda) => {
+    setData((prev) => ({ ...prev, empresa_moneda: moneda, empresa_rango_ventas_cop: '' }))
+  }
+
+  const actividadOptions = economicActivities.map(({ code, label }) => `${code} - ${label}`)
+  const actividadValue = data.empresa_actividad_economica || ''
+  const actividadSelectValue = actividadOptions.includes(actividadValue)
+    ? actividadValue
+    : (actividadValue ? OTRA_ACTIVIDAD : '')
+  const showActividadOtraInput = actividadSelectValue === OTRA_ACTIVIDAD
+  const currentSalesRangeOptions = data.empresa_moneda === 'USD' ? salesRangeUsdOptions : salesRangeCopOptions
+  const salesRangeLabel = data.empresa_moneda === 'USD'
+    ? 'Rango de ventas anuales (millones de USD)'
+    : 'Rango de ventas anuales (miles de COP)'
 
   const runAnalysis = async () => {
     if (hasMissingMetadata) {
@@ -295,6 +321,18 @@ function App() {
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[#475467] sm:text-base">
               Completa cada área para convertir el descubrimiento en un plan accionable, con recomendaciones automáticas y exportación profesional.
             </p>
+            <p className="mt-3 max-w-2xl text-xs leading-5 text-[#667085]">
+              Los datos aquí registrados están protegidos por la política de privacidad de IDEUSS disponible en{' '}
+              <a
+                href="https://www.ideuss.com/politicas-de-privacidad-de-ideuss/"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-[#F28C18] underline"
+              >
+                www.ideuss.com/politicas-de-privacidad-de-ideuss
+              </a>
+              .
+            </p>
           </div>
           <div className="brand-card">
             <img src={ideussLogo} alt="IDEUSS" className="h-14 w-auto object-contain sm:h-16" />
@@ -324,12 +362,56 @@ function App() {
               />
             </label>
             <label className="block text-sm font-medium text-[#344054]">
-              Actividad economica principal
+              Correo electrónico del contacto
               <input
-                value={data.empresa_actividad_economica || ''}
-                onChange={(event) => handleMetadataChange('empresa_actividad_economica', event.target.value)}
+                type="email"
+                value={data.empresa_contacto_email || ''}
+                onChange={(event) => handleMetadataChange('empresa_contacto_email', event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
-                placeholder="Ej. Fabricacion de alimentos"
+                placeholder="Ej. maria@empresa.com"
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Número de WhatsApp del contacto
+              <input
+                value={data.empresa_contacto_whatsapp || ''}
+                onChange={(event) => handleMetadataChange('empresa_contacto_whatsapp', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+                placeholder="Ej. +57 300 123 4567"
+              />
+            </label>
+            <label className="block text-sm font-medium text-[#344054]">
+              Actividad economica principal
+              <select
+                value={actividadSelectValue}
+                onChange={(event) => handleMetadataChange('empresa_actividad_economica', event.target.value === OTRA_ACTIVIDAD ? '' : event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+              >
+                <option value="">Selecciona una opcion</option>
+                {economicActivities.map(({ code, label }) => (
+                  <option key={code} value={`${code} - ${label}`}>{code} - {label}</option>
+                ))}
+                <option value={OTRA_ACTIVIDAD}>{OTRA_ACTIVIDAD}</option>
+              </select>
+            </label>
+            {showActividadOtraInput ? (
+              <label className="block text-sm font-medium text-[#344054]">
+                Especifica tu actividad económica
+                <input
+                  value={data.empresa_actividad_economica || ''}
+                  onChange={(event) => handleMetadataChange('empresa_actividad_economica', event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+                  placeholder="Ej. Fabricación de calzado"
+                />
+              </label>
+            ) : null}
+            <label className="block text-sm font-medium text-[#344054]">
+              URL del sitio web
+              <input
+                value={data.empresa_sitio_web || ''}
+                onChange={(event) => handleMetadataChange('empresa_sitio_web', event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
+                placeholder="https://... o escribe NA si no tienen"
               />
             </label>
             <label className="block text-sm font-medium text-[#344054]">
@@ -345,15 +427,33 @@ function App() {
                 ))}
               </select>
             </label>
+            <div className="block text-sm font-medium text-[#344054]">
+              Moneda de reporte
+              <div className="mt-2 flex gap-4">
+                {['COP', 'USD'].map((moneda) => (
+                  <label key={moneda} className="flex items-center gap-2 text-sm font-normal text-slate-700">
+                    <input
+                      type="radio"
+                      name="empresa_moneda"
+                      value={moneda}
+                      checked={(data.empresa_moneda || 'COP') === moneda}
+                      onChange={() => handleMonedaChange(moneda)}
+                      className="h-4 w-4 border-slate-300 text-[#F28C18]"
+                    />
+                    {moneda}
+                  </label>
+                ))}
+              </div>
+            </div>
             <label className="block text-sm font-medium text-[#344054]">
-              Rango de ventas en miles de COP
+              {salesRangeLabel}
               <select
                 value={data.empresa_rango_ventas_cop || ''}
                 onChange={(event) => handleMetadataChange('empresa_rango_ventas_cop', event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-[#D0D5DD] bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-[#F28C18] focus:outline-none focus:ring-4 focus:ring-[#FDE7D1]"
               >
                 <option value="">Selecciona una opcion</option>
-                {salesRangeCopOptions.map((option) => (
+                {currentSalesRangeOptions.map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>

@@ -39,6 +39,8 @@ S = {
 
 def safe(val):
     if not val: return ""
+    if isinstance(val, (list, tuple)):
+        val = ", ".join(str(item) for item in val)
     return str(val).replace("||", ", ").replace("<", "&lt;").replace(">", "&gt;")
 
 def section_header(title):
@@ -67,11 +69,11 @@ def qa_block(label, value, highlight=False):
     ]))
     return t
 
-def strategic_block(prefix, area_label, _data=None):
+def strategic_block(prefix, area_label, _data=None, dolor_label=None):
     if _data is None: _data = {}
     items = [Spacer(1, 6)]
     qs = [
-        (f"{prefix}_dolor",        "A — Dolor o cuello de botella principal", True),
+        (f"{prefix}_dolor",        dolor_label or "A — Dolor o cuello de botella principal", True),
         (f"{prefix}_auto_yn",      "B — Nivel de automatizacion actual", False),
         (f"{prefix}_auto_detalle", "   Automatizaciones existentes", False),
         (f"{prefix}_ia_yn",        "C — Uso de herramientas de IA", False),
@@ -94,9 +96,14 @@ def generate(data: dict, output_path: str):
     story = []
     empresa = data.get("empresa_nombre", "[Empresa]")
     contacto = data.get("empresa_contacto", "")
+    contacto_email = data.get("empresa_contacto_email", "")
+    contacto_whatsapp = data.get("empresa_contacto_whatsapp", "")
+    sitio_web = data.get("empresa_sitio_web", "")
     actividad_economica = data.get("empresa_actividad_economica", "")
     rango_empleados = data.get("empresa_rango_empleados", "")
+    moneda = data.get("empresa_moneda", "COP")
     rango_ventas_cop = data.get("empresa_rango_ventas_cop", "")
+    rango_ventas_label = f"Rango ventas anuales ({'millones USD' if moneda == 'USD' else 'miles COP'}):"
     fecha = datetime.now().strftime("%d de %B de %Y")
 
     size_map = {
@@ -136,12 +143,20 @@ def generate(data: dict, output_path: str):
     story.append(HRFlowable(width="100%", thickness=2, color=ORANGE, spaceAfter=18))
     story.append(Paragraph("Informe de Descubrimiento Estrategico", S["cover_title"]))
     story.append(Paragraph("Ecosistema de orquestación de procesos y agentes IA", S["cover_sub"]))
-    story.append(Spacer(1, 0.6*cm))
+    story.append(Spacer(1, 0.3*cm))
+    story.append(Paragraph(
+        "Los datos aqui registrados estan protegidos por la politica de privacidad de IDEUSS "
+        "disponible en www.ideuss.com/politicas-de-privacidad-de-ideuss",
+        S["footer"],
+    ))
+    story.append(Spacer(1, 0.4*cm))
 
     meta_rows = [
         ["Empresa:", empresa], ["Contacto:", contacto or "—"],
+        ["Correo:", contacto_email or "—"], ["WhatsApp:", contacto_whatsapp or "—"],
+        ["Sitio web:", sitio_web or "—"],
         ["Actividad economica:", actividad_economica or "—"], ["Rango empleados:", rango_empleados or "—"],
-        ["Rango ventas (miles COP):", rango_ventas_cop or "—"],
+        [rango_ventas_label, rango_ventas_cop or "—"],
         ["Fecha:", fecha], ["Elaborado por:", "IDEUSS — AI Agency & Automation"],
     ]
     meta_tbl = Table(meta_rows, colWidths=[4*cm, 13*cm])
@@ -264,37 +279,49 @@ def generate(data: dict, output_path: str):
 
     # Sections
     sections = [
-        ("1. Ventas", "v", [
-            ("v_volumen","Volumen de ventas anual"), ("v_facturas","Facturas al mes"),
-            ("v_pro","Prospectos atendidos al mes"), ("v_ll","Llamadas entrantes al mes"),
-            ("v_proc","Proceso estandarizado"), ("v_ciclo","Ciclo de venta"),
-            ("v_cotiz","Proceso de cotizacion"), ("v_perd","Frecuencia perdida de prospectos"),
-            ("v_conv","Tasa de conversion lead a cliente (%)"), ("v_ticket","Ticket promedio por venta"),
-            ("v_seg","Seguimiento post-cotizacion (SLA y frecuencia)"),
+        ("1. Mercadeo", "m", [
+            ("m_buyer","¿Quién es tu cliente ideal?"), ("m_prop","¿Qué problema resuelves?"),
+            ("m_plan","Plan de mercadeo (precios, producto, publicidad, canales y presupuesto)"),
+            ("m_leads","Canales con mayor generacion de prospectos"),
+            ("m_best","Canales con mayor calidad y por que"), ("m_cont","Gestion y frecuencia de contenido"),
+            ("m_flujo","Flujo de prospectos de mercadeo hacia ventas"),
+            ("m_cac","Costo de adquisicion de clientes por canal"),
+            ("m_conv","Tasa de conversion (llamados a la accion / impactos publicitarios)"),
+            ("m_attr","Proceso de creacion, atribucion y medicion de campanas"),
         ]),
-        ("2. Mercadeo", "m", [
-            ("m_buyer","Cliente ideal / buyer persona"), ("m_prop","Propuesta de valor"),
-            ("m_plan","Plan de marketing"), ("m_leads","Leads al mes por canal"),
-            ("m_best","Canal de mayor calidad"), ("m_cont","Gestion de contenido"),
-            ("m_flujo","Flujo lead → ventas"),
-            ("m_cac","CAC estimado por canal"), ("m_conv","Tasa de conversion lead a venta"),
-            ("m_attr","Atribucion y medicion de campanas"),
+        ("2. Ventas", "v", [
+            ("v_volumen","Volumen de ventas anual (opcional)"), ("v_canales","Canales de ventas utilizados"),
+            ("v_ciudades","Ciudades o mercados donde operan"), ("v_num_vendedores","Numero de vendedores"),
+            ("v_facturas","Promedio de facturas al mes"),
+            ("v_pro","Promedio de nuevos prospectos atendidos por mes"),
+            ("v_ll","Promedio de llamadas entrantes de clientes por mes"),
+            ("v_proc","Procesos estandarizados o con procedimientos"),
+            ("v_herramientas","Herramientas tecnologicas en el proceso de ventas"),
+            ("v_ciclo","Ciclo de venta"),
+            ("v_registro_prospectos","Registro de prospectos hasta identificacion de necesidad"),
+            ("v_cotiz","Proceso de cotizaciones"),
+            ("v_perd","Prospectos que se pierden o no son atendidos"),
+            ("v_conv","Tasa de conversion (clientes nuevos / prospectos atendidos)"),
+            ("v_ticket","Valor promedio de venta por factura emitida"),
+            ("v_seg","Seguimiento y gestion de clientes post-cotizacion"),
         ]),
         ("3. Delivery / Fulfillment", "d", [
-            ("d_proc","Proceso de entrega"), ("d_tiempo","Tiempo promedio"),
+            ("d_proc","Proceso de entrega (confirmacion a entrega al cliente)"), ("d_tiempo","Tiempo promedio de entrega"),
             ("d_doc","Documentacion del proceso"), ("d_resp","Responsable y dependencias"),
             ("d_cal","Control de calidad"), ("d_err","Errores frecuentes"),
             ("d_rec","Gestion de reclamos"), ("d_vis","Visibilidad del cliente"),
             ("d_skus","Numero de referencias o SKUs"), ("d_bodegas","Numero de bodegas"),
+            ("d_proveedores","Numero de proveedores activos"),
             ("d_merma","Tasa de desperdicio, danos u obsolescencia"),
             ("d_quiebre","Tasa de perdida de ventas por falta de inventarios"),
-            ("d_sla","SLA comprometido vs cumplimiento real"), ("d_otif","Nivel OTIF"),
+            ("d_sla","Meta de SLA comprometido vs cumplimiento real"), ("d_otif","Nivel OTIF"),
             ("d_devol","Tasa de devoluciones o retrabajos"),
         ]),
         ("4. Administracion", "a", [
-            ("a_fact","Proceso de facturacion"), ("a_soft","Software contable"),
-            ("a_cobrar","Cuentas por cobrar"), ("a_cierre","Cierre contable mensual"),
-            ("a_estr","Estructura documental"), ("a_man","Procesos manuales"),
+            ("a_fact","Proceso de facturacion, cobro y contabilizacion de pagos"), ("a_soft","Software contable"),
+            ("a_cobrar","Proceso de compras y cuentas por pagar"), ("a_cierre","Cierre contable mensual"),
+            ("a_nomina","Proceso de nomina, liquidacion y pago a empleados"),
+            ("a_estr","Gestion documental, archivo y retencion documental"), ("a_man","Procesos manuales"),
             ("a_dep","Dependencia de personas clave"), ("a_rep","Reportes de gestion"),
             ("a_dso","DSO promedio (dias de cobro)"), ("a_aprob","Flujo de aprobaciones y tiempos"),
             ("a_concil","Conciliacion bancaria y frecuencia"),
@@ -309,13 +336,18 @@ def generate(data: dict, output_path: str):
         ]),
     ]
 
+    dolor_labels = {
+        "v": "A — Dolor principal del proceso de ventas",
+        "m": "A — Dolor principal en el proceso de mercadeo",
+    }
+
     for sec_title, prefix, fields in sections:
         story.append(KeepTogether([section_header(sec_title), Spacer(1, 10)]))
         for key, lbl in fields:
             story.append(qa_block(lbl, data.get(key)))
             story.append(Spacer(1, 4))
         story.append(Paragraph(f"Descubrimiento estrategico — {sec_title.split('. ')[1]}", S["h2"]))
-        story.extend(strategic_block(prefix, sec_title, data))
+        story.extend(strategic_block(prefix, sec_title, data, dolor_label=dolor_labels.get(prefix)))
         story.append(PageBreak())
 
     story.extend(render_analysis_report(data.get("analysis_report")))
