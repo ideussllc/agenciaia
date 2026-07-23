@@ -109,6 +109,14 @@ async def set_user_active(user_id: str, is_active: bool) -> dict:
     return rows[0] if rows else {}
 
 
+async def set_user_password(user_id: str, password: str) -> dict:
+    resp = await _users_request(
+        "PATCH", params={"id": f"eq.{user_id}"}, payload={"password_hash": hash_password(password)}, prefer="return=representation"
+    )
+    rows = resp.json()
+    return rows[0] if rows else {}
+
+
 # ── Dependencias FastAPI ──────────────────────────────────────────────────────
 async def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
