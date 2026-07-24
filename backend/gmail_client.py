@@ -4,7 +4,7 @@ import time
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Optional
+from typing import Optional, Sequence, Tuple
 
 import httpx
 
@@ -44,16 +44,16 @@ def _build_mime_message(
     to_email: str,
     subject: str,
     html_body: str,
-    attachment_path: Optional[str] = None,
-    attachment_filename: Optional[str] = None,
+    attachments: Optional[Sequence[Tuple[str, str]]] = None,
 ) -> bytes:
+    """attachments es una lista de (file_path, filename)."""
     message = MIMEMultipart("mixed")
     message["To"] = to_email
     message["From"] = os.getenv("GMAIL_SENDER", "")
     message["Subject"] = subject
     message.attach(MIMEText(html_body, "html"))
 
-    if attachment_path:
+    for attachment_path, attachment_filename in attachments or []:
         with open(attachment_path, "rb") as f:
             attachment = MIMEApplication(f.read(), _subtype="pdf")
         attachment.add_header("Content-Disposition", "attachment", filename=attachment_filename or "adjunto.pdf")
@@ -66,8 +66,7 @@ async def create_draft(
     to_email: str,
     subject: str,
     html_body: str,
-    attachment_path: Optional[str] = None,
-    attachment_filename: Optional[str] = None,
+    attachments: Optional[Sequence[Tuple[str, str]]] = None,
 ) -> Optional[str]:
     """Crea un borrador (no lo envia) en la bandeja de GMAIL_SENDER. Retorna el draft_id o None si Gmail no esta configurado."""
     if not to_email:
@@ -77,9 +76,7 @@ async def create_draft(
     if not access_token:
         return None
 
-    raw = base64.urlsafe_b64encode(
-        _build_mime_message(to_email, subject, html_body, attachment_path, attachment_filename)
-    ).decode()
+    raw = base64.urlsafe_b64encode(_build_mime_message(to_email, subject, html_body, attachments)).decode()
 
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(

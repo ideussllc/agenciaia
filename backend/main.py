@@ -12,6 +12,7 @@ from typing import Optional, Any
 import uuid, json, os, tempfile, httpx
 from datetime import datetime
 from pdf_gen import generate as generate_pdf
+from proposal_pdf import generate as generate_proposal_pdf
 from ai_agent import analyze
 import auth
 import gmail_client
@@ -329,10 +330,13 @@ async def gen_pdf(payload: DiagnosticoPayload, user: dict = Depends(auth.get_cur
     empresa_slug = (payload.empresa_nombre or "diagnostico").replace(" ", "_")[:30]
     fecha_slug = datetime.now().strftime("%Y%m%d")
     filename = f"Diagnostico_OOIA_{empresa_slug}_{fecha_slug}.pdf"
+    proposal_filename = f"Propuesta_OOIA_{empresa_slug}_{fecha_slug}.pdf"
 
     tmp = tempfile.mktemp(suffix=".pdf")
+    proposal_tmp = tempfile.mktemp(suffix=".pdf")
     try:
         generate_pdf(merged, tmp)
+        generate_proposal_pdf(merged, proposal_tmp)
 
         lead_id = payload.pipedrive_lead_id
         gmail_draft_id = None
@@ -349,6 +353,7 @@ async def gen_pdf(payload: DiagnosticoPayload, user: dict = Depends(auth.get_cur
                 )
             if lead_id:
                 await pipedrive.attach_file_to_lead(lead_id, tmp, filename)
+                await pipedrive.attach_file_to_lead(lead_id, proposal_tmp, proposal_filename)
 
             if lead_id and payload.diag_id:
                 continue_url = f"{BACKEND_PUBLIC_URL}/continue/{tokens.sign_continue_token(lead_id, payload.diag_id)}"
@@ -361,8 +366,7 @@ async def gen_pdf(payload: DiagnosticoPayload, user: dict = Depends(auth.get_cur
                         payload.data.get("empresa_contacto_cargo", ""),
                         continue_url,
                     ),
-                    attachment_path=tmp,
-                    attachment_filename=filename,
+                    attachments=[(tmp, filename), (proposal_tmp, proposal_filename)],
                 )
                 if gmail_draft_id:
                     await pipedrive.add_note(
@@ -379,6 +383,8 @@ async def gen_pdf(payload: DiagnosticoPayload, user: dict = Depends(auth.get_cur
     finally:
         if os.path.exists(tmp):
             os.remove(tmp)
+        if os.path.exists(proposal_tmp):
+            os.remove(proposal_tmp)
 
 
 # Enlace "Quiero continuar" del correo de invitación al Roadmap: convierte el Lead en

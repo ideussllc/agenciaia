@@ -35,7 +35,18 @@ S = {
     "answer":      sty("an", fontName="Helvetica", fontSize=9.5, textColor=DARK, leading=14, spaceAfter=2, leftIndent=6),
     "empty":       sty("em", fontName="Helvetica-Oblique", fontSize=9.5, textColor=GRAY, leading=14, spaceAfter=2, leftIndent=6),
     "footer":      sty("ft", fontName="Helvetica", fontSize=8, textColor=GRAY, leading=10),
+    "meta_label":  sty("ml", fontName="Helvetica-Bold", fontSize=10, textColor=GRAY, leading=13),
+    "meta_value":  sty("mv", fontName="Helvetica", fontSize=10, textColor=DARK, leading=13),
 }
+
+MESES_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+
+
+def fecha_es(dt: datetime) -> str:
+    return f"{dt.day} de {MESES_ES[dt.month - 1]} de {dt.year}"
 
 def safe(val):
     if not val: return ""
@@ -104,7 +115,7 @@ def generate(data: dict, output_path: str):
     moneda = data.get("empresa_moneda", "COP")
     rango_ventas_cop = data.get("empresa_rango_ventas_cop", "")
     rango_ventas_label = f"Rango ventas anuales ({'millones USD' if moneda == 'USD' else 'miles COP'}):"
-    fecha = datetime.now().strftime("%d de %B de %Y")
+    fecha = fecha_es(datetime.now())
 
     size_map = {
         "Menos de USD $50.000 / año": "Microempresa",
@@ -151,19 +162,18 @@ def generate(data: dict, output_path: str):
     ))
     story.append(Spacer(1, 0.4*cm))
 
-    meta_rows = [
-        ["Empresa:", empresa], ["Contacto:", contacto or "—"],
-        ["Correo:", contacto_email or "—"], ["WhatsApp:", contacto_whatsapp or "—"],
-        ["Sitio web:", sitio_web or "—"],
-        ["Actividad economica:", actividad_economica or "—"], ["Rango empleados:", rango_empleados or "—"],
-        [rango_ventas_label, rango_ventas_cop or "—"],
-        ["Fecha:", fecha], ["Elaborado por:", "IDEUSS — AI Agency & Automation"],
+    meta_pairs = [
+        ("Empresa:", empresa), ("Contacto:", contacto or "—"),
+        ("Correo:", contacto_email or "—"), ("WhatsApp:", contacto_whatsapp or "—"),
+        ("Sitio web:", sitio_web or "—"),
+        ("Actividad economica:", actividad_economica or "—"), ("Rango empleados:", rango_empleados or "—"),
+        (rango_ventas_label, rango_ventas_cop or "—"),
+        ("Fecha:", fecha), ("Elaborado por:", "IDEUSS — AI Agency & Automation"),
     ]
-    meta_tbl = Table(meta_rows, colWidths=[4*cm, 13*cm])
+    meta_rows = [[Paragraph(safe(label), S["meta_label"]), Paragraph(safe(value), S["meta_value"])] for label, value in meta_pairs]
+    meta_tbl = Table(meta_rows, colWidths=[4.8*cm, 12.2*cm])
     meta_tbl.setStyle(TableStyle([
-        ("FONTNAME",(0,0),(0,-1),"Helvetica-Bold"), ("FONTNAME",(1,0),(1,-1),"Helvetica"),
-        ("FONTSIZE",(0,0),(-1,-1),10), ("TEXTCOLOR",(0,0),(0,-1),GRAY),
-        ("TEXTCOLOR",(1,0),(1,-1),DARK), ("TOPPADDING",(0,0),(-1,-1),5),
+        ("TOPPADDING",(0,0),(-1,-1),5),
         ("BOTTOMPADDING",(0,0),(-1,-1),5), ("LINEBELOW",(0,-1),(-1,-1),0.5,BORDER),
     ]))
     story.append(meta_tbl)
